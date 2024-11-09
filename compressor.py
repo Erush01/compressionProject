@@ -1,45 +1,64 @@
 import os
 import subprocess
 import time
-from EoCutils import H264
+from h264 import H264
 import random
 import string
-
+import json
 class VideoCreator:
     def __init__(self, dataset_directory, output_directory):
         self.dataset_directory = dataset_directory
         self.output_directory = output_directory
     
-        self.codec=H264()
         self.folders_to_process = os.listdir(dataset_directory)
-    def create_video_from_images(self, image_folder, output_video,sequence_name):
+        self.json_path='h264_parameters.json'
+    def compress_all(self,image_folder, output_video,sequence_name):
+        with open(self.json_path, 'r') as json_file:
+            parameters = json.load(json_file)
+            for bitrate in parameters["bitrate"]:
+                for quantizer in parameters["quantizer"]:
+                    for qp_step in parameters["qp_step"]:
+                        for bframes in parameters["bframes"]:
+                            for ipfactor in parameters["ipfactor"]:
+                                for pbfactor in parameters["pbfactor"]:
+                                    for ref in parameters["ref"]:
+                                        for subme in parameters["subme"]:
+                                            for rc_lookahead in parameters["rc_lookahead"]:
+                                                codec=H264(bitrate=bitrate,
+                                                          quantizer=quantizer,
+                                                          qp_step=qp_step,
+                                                          bframes=bframes,
+                                                          ipfactor=ipfactor,
+                                                          pbfactor=pbfactor,
+                                                          ref=ref,
+                                                          subme=subme,
+                                                          rc_lookahead=rc_lookahead)
+                                                self.create_video_from_images(image_folder, output_video,sequence_name,codec)
+    
+    def create_video_from_images(self, image_folder, output_video,sequence_name,codec):
         """Creates an MP4 video from BMP images in the specified folder."""
         video_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
         gst_source_command = [
-            "gst-launch-1.0",
+            "gst-launch-1.0","-q",
             "multifilesrc", f"location={image_folder}/%08d.bmp",
         ]
         
         gst_sink_command = [
             "!", "filesink", f"location={output_video}/{video_id}.mp4"
         ]
-        gst_command = gst_source_command + self.codec.create_line_bmp() + gst_sink_command
+        gst_command = gst_source_command + codec.create_line_bmp() + gst_sink_command
 
         try:
-            print("Executing command:", ' '.join(gst_command))
+            # print(codec)
             subprocess.run(gst_command, check=True)
-            self.codec.save_to_csv(video_id,sequence_name)
+            codec.save_to_csv(video_id,sequence_name)
         except subprocess.CalledProcessError as e:
             print(f"Error creating video from {image_folder}: {e}")
 
     def process_folder(self, folder):
         """Processes a single folder to create a video."""
         output_video = os.path.join(self.output_directory,folder)
-        print("---------------->", output_video)
-        self.create_video_from_images(os.path.join(self.dataset_directory,folder), output_video,folder)
-
-    def get_gst_encoder_command(self, gst_encoder_command):
-        self.gst_encoder_command = gst_encoder_command
+        self.compress_all(os.path.join(self.dataset_directory,folder), output_video,folder)
 
     def run(self):
         """Main function to find all image folders and process them sequentially."""
@@ -47,7 +66,6 @@ class VideoCreator:
 
         # Sequentially process each folder
         for folder in self.folders_to_process:
-            print("Folder is --->> ",folder)
             self.process_folder(folder)
 
         end_time = time.time()  # End time

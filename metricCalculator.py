@@ -231,4 +231,4 @@ class Metrics():
 
 if __name__=="__main__":
     metrics=Metrics("original","compressed")
-    
+    metrics.calculateMetrics()

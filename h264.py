@@ -4,49 +4,61 @@ import random
 import string
 
 class H264:
-    def __init__(self):
-        self.name = None
+    def __init__(self,
+                 bitrate=2048,
+                 quantizer=21,
+                 qp_step=4,
+                 bframes=0,
+                 ipfactor=1.4,
+                 pbfactor=1.3,
+                 ref=3,
+                 subme=5,
+                 rc_lookahead=40,
+                 ):
         #Default 30
         self.fps = 30
-        #Automatically decide how many B-frames to use , Default value : true
-        self.b_adapt = True
-        #Keep some B-frames as references , Default value : false
-        self.b_pyramid = False
-        #Number of B-frames between I and P , Default value : 0
-        self.bframes = 0
-        self.bframes_step = [0]
         
-        #Adaptive spatial transform size Default value : false
-        self.dct8x8 = False
         
-        #Quantizer factor between I- and P-frames , Default value : 1.4
-        self.ipfactor = 1.4
-        self.ipfactor_step = [1.4]
-        #Quantizer factor between P- and B-frames , Default value : 1.3
-        self.pbfactor = 1.3
-        self.pbfactor_step = [1.3]
+        #Bitrate in kbit/sec , Default value : 2048
+        #[576,1088,1536,2176,3072,4992,7552,20000]
+        self.bitrate= bitrate        
         
-        #Maximum quantizer difference between frames , Default value : 4
-        self.qp = 4
-        self.qp_step = [4]
-
+        
         #Constant quantizer or quality to apply , Default value : 21
-        self.quantizer = 21
+        #[0,50]
+        self.quantizer = quantizer        
+                
+        #Maximum quantizer difference between frames , Default value : 4
+        #[0,63]
+        self.qp_step = qp_step
+        
+                
+        #Number of B-frames between I and P , Default value : 0
+        #[0,16]
+        self.bframes = bframes
+                
+        #Quantizer factor between I- and P-frames , Default value : 1.4
+        #[0.0,2.0]
+        self.ipfactor = ipfactor
 
-        #Number of frames for frametype lookahead , Default value : 40
-        self.rc_lookahead = 40
+        #Quantizer factor beween P- and B-frames , Default value : 1.3
+        #[0.0,2.0]
+        self.pbfactor = pbfactor
+        
         #Number of reference frames , Default value : 3
-        self.ref_number = 3
-        self.ref_number_step = [3]
+        #[0,16]
+        self.ref = ref
 
         #Subpixel motion estimation and partition decision quality: 1=fast, 10=best
-        self.subme = 5
-        self.subme_step = [5]
+        #[1,10]
+        self.subme = subme
 
-        #Bitrate in kbit/sec , Default value : 2048
-        self.bitrate= 576
+
+        #Number of frames for frametype lookahead , Default value : 40
+        #[0,250]
+        self.rc_lookahead = rc_lookahead
+        
         #self.bitrate_step=[576,1088,1536,2176,3072,4992,7552,20000]
-        self.bitrate_step=[20000]
         # Name              Res         Link    Bitrate Video   Audio
         #                               (Mbps)  (Mbps)  (Kbps)  (Kbps)
         # 240p	            424x240	    1.0	    0.64	576 	64
@@ -61,28 +73,20 @@ class H264:
         # 1080p	            1920x1080	8.0	    5.12	4992	128
         # 1080p HQ	        1920x1080	12.0    7.68	7552	128
         # 1080p Superbit	1920x1080	N/A	    20.32	20000	320
-
-
+        
         #Target location
 
-        self.pipelines=[]
+    def __repr__(self):
+        return (f"\nbitrate={self.bitrate}\n"
+                f"quantizer={self.quantizer}\n"
+                f"qp-step={self.qp_step}\n"
+                f"bframes={self.bframes}\n" 
+                f"ip-factor={self.ipfactor}\n"
+                f"pb-factor={self.pbfactor}\n"
+                f"ref={self.ref}\n"
+                f"subme={self.subme}\n"
+                f"rc-lookahead={self.rc_lookahead}\n")
 
-        self.gst_encoder_command = []
-    
-    
-    def video_name(self,average_size_diff_percent,tail1=None,tail2=None,tail3=None):
-        self.name="bitrate-"+str(self.bitrate) + "_fps-"+str(int(self.fps*100))+"_bframes-"+str(self.bframes) +"_ipfactor-"+str(self.ipfactor) + "_pbfactor-"+str(self.pbfactor) + "_qpstep-"+str(self.qp) + "_refnum-"+str(self.ref_number) + "_subme-"+str(self.subme) + "_averagesizediffpercent-" +str(average_size_diff_percent)
-        pass
-    
-    def create_line_png(self,source_location,sink_location,begin):
-        loc = '/png/%05d.png'
-        source_location = source_location + loc
-        ### Bad implementation
-        
-        pipeline= f'multifilesrc location={source_location} index={begin} caps="image/png,framerate={int(self.fps*100)}/100" ! pngdec ! videoconvert ! queue ! x264enc bitrate={self.bitrate} bframes={self.bframes} ip-factor={self.ipfactor} pb-factor={self.pbfactor} qp-step={self.qpstep} ref={self.ref} subme={self.subme} ! queue ! mp4mux ! queue ! filesink location={sink_location}/{self.name}.mp4'
-        print("Pipeline is :    ", pipeline)
-        return pipeline
-    
     def create_line_bmp(self):
         ### Bad implementation
         pipeline= ["index=0",
@@ -91,12 +95,14 @@ class H264:
                    "!","videoconvert","!" ,"queue",
                    "!" ,"x264enc" ,
                    f"bitrate={self.bitrate}" ,
+                   f"quantizer={self.quantizer}",
+                   f"qp-step={self.qp_step}", 
                    f"bframes={self.bframes}", 
                    f"ip-factor={self.ipfactor}",
                    f"pb-factor={self.pbfactor}",
-                   f"qp-step={self.qp}", 
-                   f"ref={self.ref_number}",
+                   f"ref={self.ref}",
                    f"subme={self.subme}",
+                   f"rc-lookahead={self.rc_lookahead}",
                    "!" "queue" "!" "mp4mux" "!" "queue"]
         return pipeline
 
@@ -107,12 +113,14 @@ class H264:
             "Sequence":name,
             "Video ID": video_id,
             "Bitrate": self.bitrate,
+            "Quantizer":self.quantizer,
+            "QP Step": self.qp_step,
             "B-Frames": self.bframes,
             "IP Factor": self.ipfactor,
             "PB Factor": self.pbfactor,
-            "QP Step": self.qp,
-            "Ref Number": self.ref_number,
-            "Subme": self.subme
+            "Ref Number": self.ref,
+            "Subme": self.subme,
+            "RC Lookahead":self.rc_lookahead,
         }
 
         # Check if file exists to write headers only once
@@ -124,5 +132,3 @@ class H264:
             if not file_exists:
                 writer.writeheader()  # Write headers if file doesn't exist
             writer.writerow(data)  # Write the data row
-
-        print(f"Data saved with Video ID: {video_id}")
