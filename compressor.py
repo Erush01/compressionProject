@@ -12,7 +12,7 @@ class VideoCreator:
     
         self.codec=H264()
         self.folders_to_process = os.listdir(dataset_directory)
-    def create_video_from_images(self, image_folder, output_video):
+    def create_video_from_images(self, image_folder, output_video,sequence_name):
         """Creates an MP4 video from BMP images in the specified folder."""
         video_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
         gst_source_command = [
@@ -28,7 +28,7 @@ class VideoCreator:
         try:
             print("Executing command:", ' '.join(gst_command))
             subprocess.run(gst_command, check=True)
-            self.codec.save_to_csv(video_id)
+            self.codec.save_to_csv(video_id,sequence_name)
         except subprocess.CalledProcessError as e:
             print(f"Error creating video from {image_folder}: {e}")
 
@@ -36,7 +36,7 @@ class VideoCreator:
         """Processes a single folder to create a video."""
         output_video = os.path.join(self.output_directory,folder)
         print("---------------->", output_video)
-        self.create_video_from_images(os.path.join(self.dataset_directory,folder), output_video)
+        self.create_video_from_images(os.path.join(self.dataset_directory,folder), output_video,folder)
 
     def get_gst_encoder_command(self, gst_encoder_command):
         self.gst_encoder_command = gst_encoder_command

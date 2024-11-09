@@ -44,7 +44,7 @@ class H264:
         self.subme_step = [5]
 
         #Bitrate in kbit/sec , Default value : 2048
-        self.bitrate= 2048
+        self.bitrate= 576
         #self.bitrate_step=[576,1088,1536,2176,3072,4992,7552,20000]
         self.bitrate_step=[20000]
         # Name              Res         Link    Bitrate Video   Audio
@@ -69,12 +69,6 @@ class H264:
 
         self.gst_encoder_command = []
     
-    def generate_gst_encoder_command(self):
-        gst_encoder_command = [
-            "!", "x264enc",
-            f"bitrate={self.bitrate}"
-        ]
-        return gst_encoder_command
     
     def video_name(self,average_size_diff_percent,tail1=None,tail2=None,tail3=None):
         self.name="bitrate-"+str(self.bitrate) + "_fps-"+str(int(self.fps*100))+"_bframes-"+str(self.bframes) +"_ipfactor-"+str(self.ipfactor) + "_pbfactor-"+str(self.pbfactor) + "_qpstep-"+str(self.qp) + "_refnum-"+str(self.ref_number) + "_subme-"+str(self.subme) + "_averagesizediffpercent-" +str(average_size_diff_percent)
@@ -106,10 +100,11 @@ class H264:
                    "!" "queue" "!" "mp4mux" "!" "queue"]
         return pipeline
 
-    def save_to_csv(self, video_id,filepath='output.csv'):
+    def save_to_csv(self, video_id,name,filepath='output.csv'):
         # Generate a random 8-character ID
         # Define the data row to save
         data = {
+            "Sequence":name,
             "Video ID": video_id,
             "Bitrate": self.bitrate,
             "B-Frames": self.bframes,
