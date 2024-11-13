@@ -11,30 +11,18 @@ class VideoCreator:
         self.output_directory = output_directory
     
         self.folders_to_process = os.listdir(dataset_directory)
-        self.json_path='h264_parameters.json'
+        self.json_path='h264_parameters_small_test.json'
     def compress_all(self,image_folder, output_video,sequence_name):
         with open(self.json_path, 'r') as json_file:
             parameters = json.load(json_file)
             for bitrate in parameters["bitrate"]:
                 for quantizer in parameters["quantizer"]:
-                    for qp_step in parameters["qp_step"]:
-                        for bframes in parameters["bframes"]:
-                            for ipfactor in parameters["ipfactor"]:
-                                for pbfactor in parameters["pbfactor"]:
-                                    for ref in parameters["ref"]:
-                                        for subme in parameters["subme"]:
-                                            for rc_lookahead in parameters["rc_lookahead"]:
-                                                codec=H264(bitrate=bitrate,
-                                                          quantizer=quantizer,
-                                                          qp_step=qp_step,
-                                                          bframes=bframes,
-                                                          ipfactor=ipfactor,
-                                                          pbfactor=pbfactor,
-                                                          ref=ref,
-                                                          subme=subme,
-                                                          rc_lookahead=rc_lookahead)
-                                                self.create_video_from_images(image_folder, output_video,sequence_name,codec)
-    
+                    for subme in parameters["subme"]:
+                            codec=H264(bitrate=bitrate,
+                                        quantizer=quantizer,
+                                        subme=subme)
+                            self.create_video_from_images(image_folder, output_video,sequence_name,codec)
+
     def create_video_from_images(self, image_folder, output_video,sequence_name,codec):
         """Creates an MP4 video from BMP images in the specified folder."""
         video_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
@@ -49,7 +37,7 @@ class VideoCreator:
         gst_command = gst_source_command + codec.create_line_bmp() + gst_sink_command
 
         try:
-            # print(codec)
+            print(codec)
             subprocess.run(gst_command, check=True)
             codec.save_to_csv(video_id,sequence_name)
         except subprocess.CalledProcessError as e:

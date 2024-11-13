@@ -21,7 +21,7 @@ class FrameExtractor:
             if not ret:
                 break
             # Save frame as BMP image with %08d format
-            frame_filename = os.path.join(output_folder, f"{frame_num:08d}.bmp")
+            frame_filename = os.path.join(output_folder, f"{frame_num:08d}.png")
             cv2.imwrite(frame_filename, frame)
             frame_num += 1
         

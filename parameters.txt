@@ -1,0 +1,35 @@
+I-Frame:Full reference frames encoded independently, providing the entire image data. They allow random access and error recovery but are less compressed.
+
+P-Frame:Predicted frames that store changes from a previous I- or P-frame, reducing file size by compressing motion data.
+
+B-Frame: Encodes the difference between the frame and both a past (I or P) and a future frame (P or I), maximizing compression.Typically situated between I and P frames or between two P-frames, further reducing file size but increasing the computational load for decoding.
+
+Compression Parameters
+Bitrate:The amount of data processed per second in a video, typically measured in kilobits per second (kbps) or megabits per second (Mbps).Higher bitrates generally mean better video quality but larger file sizes. Lower bitrates reduce file size but can cause quality loss.
+
+Quantizer:A parameter that controls the compression level by determining the amount of data discarded during encoding.Lower quantizer values retain more detail (higher quality, larger file size), while higher values increase compression (lower quality, smaller file size).
+
+Quantization Step:The step size for adjusting the quantization parameter, influencing how much quality or compression changes from one frame to the next. A larger QP step results in greater quality variation between frames, potentially causing visual inconsistency, while a smaller step provides smoother transitions.
+
+IP factor: The factor that adjusts the quantization between I-frames and P-frames. A higher IP factor compresses P-frames more relative to I-frames, reducing file size but potentially impacting quality. Lower values make P-frames closer in quality to I-frames.
+
+PB factor:Similar to IP factor, it controls the quantization difference between P-frames and B-frames.Higher PB factors result in more compression for B-frames compared to P-frames, reducing file size with some potential quality trade-off.
+
+Reference frames:Frames that are used as references for encoding subsequent frames, especially P- and B-frames.More reference frames generally improve compression efficiency and quality, but require more processing power and memory.
+
+Subpixel Motion Estimation:A technique that estimates motion between frames at a finer resolution than the pixel level, using subpixel units (such as half or quarter pixels).By interpolating between pixels, the encoder can detect smaller movements and capture motion more accurately. This is essential in encoding smooth motion, particularly for scenes with slow or subtle movement.Results in higher video quality and better compression efficiency, as more accurate motion vectors reduce residual errors, leading to more effective encoding of differences between frames.
+
+Rate control lookahead: A feature in rate control algorithms that analyzes a set number of upcoming frames before encoding.By "looking ahead" at future frames, the encoder can better allocate bits based on predicted complexity, prioritizing high-motion or detailed areas while compressing less important areas.Helps achieve a balance between video quality and file size, as it enables more efficient bitrate allocation, reducing visible artifacts in complex scenes and stabilizing quality throughout the video.
+
+Quality Metrics
+
+PSNR(Peak signal to noise ratio):PSNR measures the ratio between the maximum possible power of a signal (original image) and the power of noise (distortion introduced by compression).Higher PSNR values generally indicate better quality, as they signify less distortion. Common PSNR values range from 20–50 dB, with values above 30 dB often considered acceptable quality.
+
+SSIM(Structural similarity index): SSIM is a metric used to measure the structural similarity between two images, focusing on luminance, contrast, and structure rather than pixel-by-pixel differences.SSIM compares local patterns of pixel intensities that represent structures in the images. SSIM is widely used because it correlates well with human perception of image quality, making it a valuable measure for lossy compression.
+
+Color Bleeding:Color bleeding is an artifact where colors extend beyond their intended boundaries, "bleeding" into adjacent areas. Often caused by aggressive compression, color bleeding occurs when the encoder blurs or simplifies color information, particularly in areas with sharp color transitions.This artifact results in a loss of detail and color accuracy, especially noticeable around edges or in regions with high color contrast.
+
+Ringing:Ringing artifacts are unwanted "halo" or "wave" effects near edges or sharp transitions in compressed images. Ringing can make edges look blurry or wavy, reducing clarity and creating distracting visual noise around objects.
+
+VIF(Visual Information Fidelity): VIF is a quality metric that measures the amount of visual information preserved in a compressed image compared to the original.VIF uses a model based on natural scene statistics and human visual perception to evaluate how much information from the original is retained in the processed image.VIF is particularly useful in scenarios where preserving detailed information is essential, as it correlates with the human perception of information loss.
+

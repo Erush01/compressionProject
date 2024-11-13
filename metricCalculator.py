@@ -49,7 +49,7 @@ class Metrics():
                                         for x in os.listdir(os.path.join(self.original_path,sequence))])
                 for id in video_id:
 
-                    comp_images=sorted([os.path.join(self.compressed_path,sequence,id,x) 
+                    comp_images=sorted([os.path.join(self.compressed_path,sequence,id,x.replace(".bmp",".png")) 
                                         for x in os.listdir(os.path.join(self.original_path,sequence))])
                     psnr,ssim,cbleed,ringing,vif=0,0,0,0,0
                     seq_len=len(original_images)
@@ -57,7 +57,7 @@ class Metrics():
                     for i in range(0,seq_len):
                         original = cv2.imread(original_images[i]) 
                         compressed = cv2.imread(comp_images[i])
-
+                        
                         psnr+=self._PSNR(original,compressed)
                         ssim+=self._SSIM(original,compressed)
                         cbleed+=self._ColorBleeding(original,compressed)
