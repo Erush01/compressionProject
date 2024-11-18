@@ -106,7 +106,7 @@ class H264:
                    "!" "queue" "!" "mp4mux" "!" "queue"]
         return pipeline
 
-    def save_to_csv(self, video_id,name,filepath='output.csv'):
+    def save_to_csv(self, video_id,name,filepath='compressionData.csv'):
         # Generate a random 8-character ID
         # Define the data row to save
         data = {

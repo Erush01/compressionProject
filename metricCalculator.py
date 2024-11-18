@@ -6,111 +6,37 @@ from skimage.metrics import structural_similarity,peak_signal_noise_ratio
 import pywt
 import scipy
 from scipy import ndimage, special
-import sewar
-import  glob
+import glob
 import csv
-from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn,MofNCompleteColumn,TimeElapsedColumn,TaskProgressColumn,ProgressColumn
+from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, MofNCompleteColumn, TimeElapsedColumn, TaskProgressColumn, ProgressColumn
 import rich
 from rich.panel import Panel
 from rich.table import Table
+import multiprocessing as mp
+from functools import partial
+from itertools import repeat
 
-class Metrics():
-    def __init__(self,original_path,compressed_path):
-        self.compressed_path=compressed_path
-        self.original_path=original_path
-        self.metricProgress = Progress(
-        "{task.description}",
-        SpinnerColumn('aesthetic',speed=0.4,style=rich.style.Style(color='yellow')),
-        BarColumn(),
-        TaskProgressColumn(),
-        MofNCompleteColumn(),
-        TimeElapsedColumn(),
-        )    
-        
-        self.sequenceProgress = Progress(TextColumn("[progress.description]{task.description}"),
-                                         BarColumn(),
-                                         TaskProgressColumn(),
-                                         MofNCompleteColumn(),
-                                         TimeElapsedColumn())
-        self.progress_table = Table.grid()
-        self.progress_table.add_row(
-            Panel.fit(
-                self.sequenceProgress, title="Overall Progress", border_style="yellow", padding=(2, 2)
-            ),
-            Panel.fit(self.metricProgress, title="[b]Sequence Progress", border_style="cyan", padding=(1, 2)),
-        )
-        
-    def calculateMetrics(self):
-        with rich.live.Live(self.progress_table,refresh_per_second=10):
-            for sequence in os.listdir(self.original_path):
-                video_id=[x for x in os.listdir(os.path.join(self.compressed_path,sequence)) if not x.endswith(".mp4")]
-                overall_task= self.sequenceProgress.add_task(f"[b]{sequence}", total=len(video_id))
-                original_images=sorted([os.path.join(self.original_path,sequence,x) 
-                                        for x in os.listdir(os.path.join(self.original_path,sequence))])
-                for id in video_id:
+def process_image_pair(image_paths):
+    """Process a single pair of original and compressed images"""
+    original_path, compressed_path = image_paths
+    original = cv2.imread(original_path)
+    compressed = cv2.imread(compressed_path)
+    
+    return calculate_metrics(original, compressed)
 
-                    comp_images=sorted([os.path.join(self.compressed_path,sequence,id,x) 
-                                        for x in os.listdir(os.path.join(self.original_path,sequence))])
-                    psnr,ssim,cbleed,ringing,vif=0,0,0,0,0
-                    seq_len=len(original_images)
-                    task=self.metricProgress.add_task(f"[bold blue]{id}",total=seq_len)
-                    for i in range(0,seq_len):
-                        original = cv2.imread(original_images[i]) 
-                        compressed = cv2.imread(comp_images[i])
-
-                        psnr+=self._PSNR(original,compressed)
-                        ssim+=self._SSIM(original,compressed)
-                        cbleed+=self._ColorBleeding(original,compressed)
-                        ringing+=self._Ringing(original,compressed)
-                        vif+=self._VIF(original,compressed)
-                        
-                        self.metricProgress.update(task,advance=1)
-                        
-                    psnr/=seq_len
-                    ssim/=seq_len
-                    cbleed/=seq_len
-                    ringing/=seq_len
-                    vif/=seq_len
-                    self.saveCsv(sequence,id,psnr,ssim,cbleed,ringing,vif)
-                    self.sequenceProgress.update(overall_task,advance=1)
-                
-    def saveCsv(self,name,video_id,psnr,ssim,cbleed,ringing,vif,filepath='metrics.csv'):
-        # Generate a random 8-character ID
-        # Define the data row to save
-        data = {
-            "Sequence":name,
-            "Video ID": video_id,
-            "PSNR(dB)": psnr,
-            "SSIM": ssim,
-            "Cbleed": cbleed,
-            "Ringing": ringing,
-            "VIF": vif}
-
-        # Check if file exists to write headers only once
-        file_exists = os.path.isfile(filepath)
-
-        # Write the data to a CSV file
-        with open(filepath, mode='a', newline='') as file:
-            writer = csv.DictWriter(file, fieldnames=data.keys())
-            if not file_exists:
-                writer.writeheader()  # Write headers if file doesn't exist
-            writer.writerow(data)  # Write the data row
-
-        print(f"Data saved with Video ID: {video_id}")                
-                    
-    def _PSNR(self,img1, img2): 
-        mse = np.mean((img1 - img2) ** 2) 
-        if(mse == 0):  # MSE is zero means no noise is present in the signal . 
-                    # Therefore PSNR have no importance. 
+def calculate_metrics(original, compressed):
+    """Calculate all metrics for a pair of images"""
+    def _PSNR(img1, img2):
+        mse = np.mean((img1 - img2) ** 2)
+        if(mse == 0):
             return float("inf")
         max_pixel = 255.0
-        psnr = 20 * math.log10(max_pixel / math.sqrt(mse)) 
-        return psnr 
-    
-    def _SSIM(self,img1,img2):
-    
-        img1=cv2.cvtColor(img1,cv2.COLOR_BGR2GRAY).astype(np.float32)
-        img2=cv2.cvtColor(img2,cv2.COLOR_BGR2GRAY).astype(np.float32)
+        psnr = 20 * math.log10(max_pixel / math.sqrt(mse))
+        return psnr
+
+    def _SSIM(img1, img2):
+        img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY).astype(np.float32)
+        img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY).astype(np.float32)
         
         C1 = (0.01 * 255) ** 2
         C2 = (0.03 * 255) ** 2
@@ -124,51 +50,36 @@ class Metrics():
 
         ssim_map = ((2 * mu1 * mu2 + C1) * (2 * sigma12 + C2)) / ((mu1 ** 2 + mu2 ** 2 + C1) * (sigma1 + sigma2 + C2))
         return ssim_map.mean()
-    
-    def _ColorBleeding(self,original, compressed):
-        """
-        Measures color bleeding artifacts in chrominance channels.
-        Works with YCbCr color space where bleeding is most visible.
-        """
+
+    def _ColorBleeding(original, compressed):
         if len(original.shape) != 3:
             return 0.0
             
-        # Convert to YCbCr
         original_ycbcr = cv2.cvtColor(original, cv2.COLOR_RGB2YCrCb)
         compressed_ycbcr = cv2.cvtColor(compressed, cv2.COLOR_RGB2YCrCb)
         
-        # Analyze chrominance channels (Cb and Cr)
         cb_diff = np.abs(original_ycbcr[:,:,1] - compressed_ycbcr[:,:,1])
         cr_diff = np.abs(original_ycbcr[:,:,2] - compressed_ycbcr[:,:,2])
         
-        # Calculate color bleeding score
         bleeding_score = (np.mean(cb_diff) + np.mean(cr_diff)) / 2
         return bleeding_score
 
-    def _Ringing(self,original, compressed):
-        """
-        Measures the ringing effect in a compressed image by comparing edge oscillations.
-        """
-        # Convert images to grayscale
+    def _Ringing(original, compressed):
         original_gray = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
         compressed_gray = cv2.cvtColor(compressed, cv2.COLOR_BGR2GRAY)
 
-        # Edge detection on the original image
         edges = cv2.Canny(original_gray, 100, 200)
 
-        # Sobel filter to measure intensity gradients (captures oscillations)
         sobel_original = cv2.Laplacian(original_gray, cv2.CV_64F)
         sobel_compressed = cv2.Laplacian(compressed_gray, cv2.CV_64F)
-        # Focus on regions around edges for ringing effect measurement
         edge_regions = edges > 0
 
-        # Calculate difference in gradients (oscillations) between original and compressed
         gradient_diff = np.abs(sobel_original - sobel_compressed)
         ringing_score = np.mean(gradient_diff[edge_regions])
 
         return ringing_score
 
-    def _VIF(self,ref, dist):
+    def _VIF(ref, dist):
         def compute_vif(ref_coeffs, dist_coeffs, sigma_nsq):
             num = 0.0
             den = 0.0
@@ -176,59 +87,115 @@ class Metrics():
             for ref, dist in zip(ref_coeffs, dist_coeffs):
                 ref_var = np.var(ref)
                 dist_var = np.var(dist)
-                g = ref_var / (dist_var + 1e-10)  # Gain factor
+                g = ref_var / (dist_var + 1e-10)
 
-                # Calculate the VIF numerator and denominator
                 num += np.log(1 + (g * ref_var / (sigma_nsq + 1e-10)))
                 den += np.log(1 + (ref_var / (sigma_nsq + 1e-10)))
 
             vif_value = num / (den + 1e-10)
             return vif_value
 
-        # Convert images to grayscale and normalize
         ref = cv2.cvtColor(ref, cv2.COLOR_BGR2GRAY) / 255.0
         dist = cv2.cvtColor(dist, cv2.COLOR_BGR2GRAY) / 255.0
         
-        # Wavelet decomposition using Haar wavelet
-        sigma_nsq = 0.4  # Noise variance in natural images (adjustable based on image properties)
+        sigma_nsq = 0.4
         ref_coeffs = pywt.wavedec2(ref, 'haar', level=4)
         dist_coeffs = pywt.wavedec2(dist, 'haar', level=4)
         
-        # Remove the approximation coefficients
         ref_coeffs = ref_coeffs[1:]
         dist_coeffs = dist_coeffs[1:]
         
-        # Calculate VIF for each sub-band level
-        vifp = sum(compute_vif(ref_band, dist_band, sigma_nsq) for ref_band, dist_band in zip(ref_coeffs, dist_coeffs))
+        vifp = sum(compute_vif(ref_band, dist_band, sigma_nsq) 
+                  for ref_band, dist_band in zip(ref_coeffs, dist_coeffs))
         return vifp
+
+    return {
+        'psnr': _PSNR(original, compressed),
+        'ssim': _SSIM(original, compressed),
+        'cbleed': _ColorBleeding(original, compressed),
+        'ringing': _Ringing(original, compressed),
+        'vif': _VIF(original, compressed)
+    }
+
+class Metrics():
+    def __init__(self, original_path, compressed_path, num_processes=None):
+        self.compressed_path = compressed_path
+        self.original_path = original_path
+        self.num_processes = num_processes or mp.cpu_count()
         
+
+    def process_sequence(self, sequence_info):
+        """Process a single sequence"""
+        sequence, video_id = sequence_info
         
-    def _PSNR_Grayscale(self,img1, img2):
-        # Convert images to grayscale
-        img1_gray = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-        img2_gray = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+        # Get sorted lists of image paths
+        original_images = sorted([os.path.join(self.original_path, sequence, x) 
+                                for x in os.listdir(os.path.join(self.original_path, sequence))])
+        comp_images = sorted([os.path.join(self.compressed_path, sequence, video_id, x.replace(".bmp", ".png")) 
+                            for x in os.listdir(os.path.join(self.original_path, sequence))])
         
-        # Calculate MSE
-        mse = np.mean((img1_gray - img2_gray) ** 2)
-        if mse == 0:
-            return float("inf")
-        max_pixel = 255.0
-        psnr = 20 * math.log10(max_pixel / math.sqrt(mse))
-        return psnr
+        # Create image pairs for processing
+        image_pairs = list(zip(original_images, comp_images))
+        
+        # Process all images in the sequence
+        with mp.Pool(processes=self.num_processes) as pool:
+            results = pool.map(process_image_pair, image_pairs)
+        
+        # Calculate averages
+        seq_len = len(results)
+        avg_metrics = {
+            'psnr': sum(r['psnr'] for r in results) / seq_len,
+            'ssim': sum(r['ssim'] for r in results) / seq_len,
+            'cbleed': sum(r['cbleed'] for r in results) / seq_len,
+            'ringing': sum(r['ringing'] for r in results) / seq_len,
+            'vif': sum(r['vif'] for r in results) / seq_len
+        }
+        
+        return sequence, video_id, avg_metrics
 
-    def _PSNR_RGB(self,img1, img2):
-        psnr_values = {}
-        for i, color in enumerate(['R', 'G', 'B']):
-            mse = np.mean((img1[:, :, i] - img2[:, :, i]) ** 2)
-            if mse == 0:
-                psnr_values[color] = float("inf")
-            else:
-                max_pixel = 255.0
-                psnr_values[color] = 20 * math.log10(max_pixel / math.sqrt(mse))
-        return psnr_values    
+    def saveCsv(self, name, video_id, psnr, ssim, cbleed, ringing, vif, filepath='compressionMetrics.csv'):
+        data = {
+            "Sequence": name,
+            "Video ID": video_id,
+            "PSNR(dB)": psnr,
+            "SSIM": ssim,
+            "Cbleed": cbleed,
+            "Ringing": ringing,
+            "VIF": vif
+        }
 
+        file_exists = os.path.isfile(filepath)
+        
+        with open(filepath, mode='a', newline='') as file:
+            writer = csv.DictWriter(file, fieldnames=data.keys())
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow(data)
 
+    def calculateMetrics(self):
+            # Process each sequence
+        for sequence in os.listdir(self.original_path):
+            video_ids = [x for x in os.listdir(os.path.join(self.compressed_path, sequence)) 
+                    if not x.endswith(".mp4")]
+            
 
-if __name__=="__main__":
-    metrics=Metrics("original","compressed")
+            # Create sequence processing pool
+            sequence_data = list(zip(repeat(sequence), video_ids))
+            
+            # Process sequences one at a time, but process images within each sequence in parallel
+            for seq_info in sequence_data:
+                sequence, video_id, metrics = self.process_sequence(seq_info)
+                
+                # Save results and update progress
+                self.saveCsv(
+                    sequence, video_id,
+                    metrics['psnr'],
+                    metrics['ssim'],
+                    metrics['cbleed'],
+                    metrics['ringing'],
+                    metrics['vif']
+                )
+
+if __name__ == "__main__":
+    metrics = Metrics("original", "/media/parslab2/harddisk1/compressionProjectUncompressed")
     metrics.calculateMetrics()
