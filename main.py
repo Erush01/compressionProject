@@ -1,6 +1,6 @@
-from compressor import VideoCreator
+from VideoCreator import VideoCreator
 from h264 import H264
-from metricCalculator import Metrics
+from MetricCalculator import Metrics
 from FrameExtractor import FrameExtractor
 import json
 from itertools import product
@@ -69,7 +69,8 @@ class AllInOne:
         start_time = time.time()  # Start time 
         for folder in os.listdir(self.input_dir):
             output_video = os.path.join(self.output_directory,folder)
-            
+            shutil.rmtree(output_video)
+            os.makedirs(output_video)
             self.processFolder(os.path.join(self.input_dir,folder), output_video,folder)
 
         end_time = time.time()  # End time

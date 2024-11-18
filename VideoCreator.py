@@ -10,14 +10,13 @@ from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn,MofNCom
 import rich
 import shutil
 from FrameExtractor import FrameExtractor
-from metricCalculator import Metrics
+from MetricCalculator import Metrics
 class VideoCreator:
     def __init__(self, dataset_directory, output_directory):
         self.dataset_directory = dataset_directory
         self.output_directory = output_directory
     
         self.folders_to_process = os.listdir(dataset_directory)
-
 
     def create_video_from_images(self, image_folder, output_video,sequence_name,codec):
         """Creates an MP4 video from BMP images in the specified folder."""
@@ -33,7 +32,6 @@ class VideoCreator:
         gst_command = gst_source_command + codec.create_line_bmp() + gst_sink_command
 
         try:
-            # print(codec)
             subprocess.run(gst_command, check=True)
             codec.save_to_csv(video_id,sequence_name)
 
