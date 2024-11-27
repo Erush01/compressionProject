@@ -64,7 +64,6 @@ class AllInOne:
                                         self.console.log(f"Batch {totalBatchCounter}/{batchNumber} is completed.")
                                         batchCounter=0
                                         totalBatchCounter+=1
-
                                     self.sequenceProgress.update(overall_task,advance=1)
                                     batchCounter+=1
 
@@ -78,7 +77,8 @@ class AllInOne:
             shutil.rmtree(output_video)
             os.makedirs(output_video)
             self.processFolder(os.path.join(self.input_dir,folder), output_video,folder)
-
+            shutil.rmtree(output_video)
+            os.makedirs(output_video)
         end_time = time.time()  # End time
         total_time = end_time - start_time  # Calculate total execution time
         print(f"Total execution time: {total_time:.2f} seconds")
@@ -88,7 +88,7 @@ if __name__=="__main__":
 
     dataset_directory = 'original'  # Replace with your actual path
     output_directory = 'compressed'   # Replace with your desired output path
-    batchsize=32
+    batchsize=2
     main=AllInOne(dataset_directory,output_directory,batchsize)
     main.run()
 

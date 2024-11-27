@@ -16,6 +16,19 @@ import multiprocessing as mp
 from functools import partial
 from itertools import repeat
 
+def calculate_folder_size(path):
+    """Calculate the total size of all files in the folder and return it in MB with 4 decimal places."""
+    total_size = 0
+    for dirpath, dirnames, filenames in os.walk(path):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            if os.path.isfile(fp):
+                total_size += os.path.getsize(fp)
+    
+    # Convert size to MB and format to 4 decimal places
+    total_size_mb = total_size / (1024 ** 2)  # Convert from bytes to MB
+    return round(total_size_mb, 4)
+
 def process_image_pair(image_paths):
     """Process a single pair of original and compressed images"""
     original_path, compressed_path = image_paths
@@ -128,12 +141,27 @@ class Metrics():
         """Process a single sequence"""
         sequence, video_id = sequence_info
         
+
+        original_folder = os.path.join(self.original_path, sequence)
+        compressed_folder = os.path.join(self.compressed_path, sequence, video_id)
+    
+
+        original_size = calculate_folder_size(original_folder)  # In MB
+        compressed_size = calculate_folder_size(compressed_folder)  # In MB
+        
+        # Calculate size difference and compression ratio
+        size_difference = original_size - compressed_size
+        compression_ratio = (size_difference / original_size) * 100 if original_size > 0 else 0
+
         # Get sorted lists of image paths
         original_images = sorted([os.path.join(self.original_path, sequence, x) 
                                 for x in os.listdir(os.path.join(self.original_path, sequence))])
         comp_images = sorted([os.path.join(self.compressed_path, sequence, video_id, x.replace(".bmp", ".png")) 
                             for x in os.listdir(os.path.join(self.original_path, sequence))])
         
+
+     
+
         # Create image pairs for processing
         image_pairs = list(zip(original_images, comp_images))
         
@@ -148,12 +176,13 @@ class Metrics():
             'ssim': sum(r['ssim'] for r in results) / seq_len,
             'cbleed': sum(r['cbleed'] for r in results) / seq_len,
             'ringing': sum(r['ringing'] for r in results) / seq_len,
-            'vif': sum(r['vif'] for r in results) / seq_len
+            'vif': sum(r['vif'] for r in results) / seq_len,
+            'compression_ratio': compression_ratio
         }
         
         return sequence, video_id, avg_metrics
 
-    def saveCsv(self, name, video_id, psnr, ssim, cbleed, ringing, vif, filepath='compressionMetrics.csv'):
+    def saveCsv(self, name, video_id, psnr, ssim, cbleed, ringing, vif,compression_ratio, filepath='compressionMetrics.csv'):
         data = {
             "Sequence": name,
             "Video ID": video_id,
@@ -161,7 +190,8 @@ class Metrics():
             "SSIM": ssim,
             "Cbleed": cbleed,
             "Ringing": ringing,
-            "VIF": vif
+            "VIF": vif,
+            "Compression Ratio (%)": compression_ratio
         }
 
         file_exists = os.path.isfile(filepath)
@@ -192,7 +222,8 @@ class Metrics():
                 metrics['ssim'],
                 metrics['cbleed'],
                 metrics['ringing'],
-                metrics['vif']
+                metrics['vif'],
+                metrics['compression_ratio']
             )
 
 if __name__ == "__main__":
