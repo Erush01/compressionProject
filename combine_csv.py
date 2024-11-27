@@ -14,4 +14,4 @@ def merge_csv_data(output_data,metrics_data):
 
     return merged_df
 
-merge_csv_data("output.csv","metrics.csv")
+merge_csv_data("compressionData.csv","compressionMetrics.csv")

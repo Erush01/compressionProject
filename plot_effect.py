@@ -105,22 +105,28 @@ fig.update_layout(
 # Create correlation heatmap
 def create_correlation_heatmap(df):
     """
-    Create a correlation heatmap between encoding parameters and quality metrics.
+    Create a correlation heatmap between encoding parameters (on the left) 
+    and quality metrics (at the bottom).
     """
-    # Select relevant columns for correlation
-    columns_of_interest = ['Bitrate', 'Quantizer', 'Subme', 'PSNR(dB)', 'SSIM', 'Cbleed', 'Ringing', 'VIF']
-    correlation_matrix = df[columns_of_interest].corr()
+    # Define the parameters and metrics
+    parameters = ['Bitrate', 'B-Frames', 'Ref Number', 'RC Lookahead']
+    metrics = ['PSNR(dB)', 'SSIM', 'Cbleed', 'Ringing', 'VIF']
     
-    # Generate heatmap using plotly express
+    # Rearrange the correlation matrix to have parameters on rows and metrics on columns
+    correlation_matrix = df[parameters + metrics].corr().loc[parameters, metrics]
+    
+    # Generate heatmap using Plotly Express
     heatmap_fig = px.imshow(
         correlation_matrix,
         text_auto=".2f",
         zmin=-1,
         zmax=1,
-        color_continuous_scale='coolwarm',
-        title="Correlation between Encoding Parameters and Quality Metrics"
+        color_continuous_scale='amp',
+        title="Correlation between Encoding Parameters (Left) and Quality Metrics (Bottom)"
     )
+    
     return heatmap_fig
+
 
 # Display the scatter plot and the heatmap
 scatter_fig = fig
@@ -128,4 +134,4 @@ heatmap_fig = create_correlation_heatmap(df)
 
 # Show both figures
 scatter_fig.show()
-# heatmap_fig.show()
+heatmap_fig.show()

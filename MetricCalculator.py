@@ -172,29 +172,28 @@ class Metrics():
                 writer.writeheader()
             writer.writerow(data)
 
-    def calculateMetrics(self):
+    def calculateMetrics(self,sequence):
             # Process each sequence
-        for sequence in os.listdir(self.original_path):
-            video_ids = [x for x in os.listdir(os.path.join(self.compressed_path, sequence)) 
-                    if not x.endswith(".mp4")]
-            
 
-            # Create sequence processing pool
-            sequence_data = list(zip(repeat(sequence), video_ids))
+        video_ids = [x for x in os.listdir(os.path.join(self.compressed_path, sequence)) 
+                if not x.endswith(".mp4")]
+        
+        # Create sequence processing pool
+        sequence_data = list(zip(repeat(sequence), video_ids))
+        
+        # Process sequences one at a time, but process images within each sequence in parallel
+        for seq_info in sequence_data:
+            sequence, video_id, metrics = self.process_sequence(seq_info)
             
-            # Process sequences one at a time, but process images within each sequence in parallel
-            for seq_info in sequence_data:
-                sequence, video_id, metrics = self.process_sequence(seq_info)
-                
-                # Save results and update progress
-                self.saveCsv(
-                    sequence, video_id,
-                    metrics['psnr'],
-                    metrics['ssim'],
-                    metrics['cbleed'],
-                    metrics['ringing'],
-                    metrics['vif']
-                )
+            # Save results and update progress
+            self.saveCsv(
+                sequence, video_id,
+                metrics['psnr'],
+                metrics['ssim'],
+                metrics['cbleed'],
+                metrics['ringing'],
+                metrics['vif']
+            )
 
 if __name__ == "__main__":
     metrics = Metrics("original", "/media/parslab2/harddisk1/compressionProjectUncompressed")

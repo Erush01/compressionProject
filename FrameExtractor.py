@@ -28,22 +28,18 @@ class FrameExtractor:
         
         cap.release()
 
-    def process_video_folder(self, video_folder):
-        videos=os.listdir(video_folder)
-        for video in videos:
-            video_id=video.split(".")[0]
-            video_path = os.path.join(video_folder, f"{video_id}.mp4")
-            output_folder = os.path.join(video_folder, f"{video_id}")
-            if os.path.exists(video_path):
-                self.extract_frames(video_path, output_folder)
 
-    def run(self):
+    def process_video(self,video_path):
+            output_video_path=video_path.replace('.mp4','')
+            if os.path.exists(video_path):
+                self.extract_frames(video_path, output_video_path)
+
+    def run(self,folder):
         # Get all folders in the sequences directory
-        video_folders = glob.glob(os.path.join(self.sequences_folder, "*"))
-        
+        videos=[os.path.join(folder,x)for x in os.listdir(folder)]
         # Prepare the arguments list for multiprocessing
         with Pool(processes=self.max_threads) as pool:
-            pool.map(self.process_video_folder, video_folders)
+            pool.map(self.process_video, videos)
     
 
 if __name__ == "__main__":

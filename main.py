@@ -39,6 +39,7 @@ class AllInOne:
             batchCounter=0
             totalBatchCounter=1
             with rich.live.Live(self.sequenceProgress,console=self.console,refresh_per_second=10):
+                    self.console.log(f'Processing sequence: {name}')
                     overall_task= self.sequenceProgress.add_task(f"[b]{name}", total=num_combinations)
                     for bitrate in parameters["bitrate"]:
                         # bitrate_t=self.metricProgress.add_task(f"[bold blue]{id}",total=5)
@@ -54,8 +55,10 @@ class AllInOne:
                                                 rc_lookahead=rc_lookahead)
                                     self.compressor.create_video_from_images(input_dir, output_dir,name,codec)
                                     if batchCounter==self.batchSize:
-                                        self.extractor.run()
-                                        self.metrics.calculateMetrics()
+                                        self.console.log(f"Starting Uncompression of batch {totalBatchCounter}/{batchNumber}.")
+                                        self.extractor.run(output_dir)
+                                        self.console.log(f"Starting Metrics calculation of batch {totalBatchCounter}/{batchNumber}.")
+                                        self.metrics.calculateMetrics(name)
                                         shutil.rmtree(output_dir)
                                         os.makedirs(output_dir)
                                         self.console.log(f"Batch {totalBatchCounter}/{batchNumber} is completed.")
@@ -64,6 +67,9 @@ class AllInOne:
 
                                     self.sequenceProgress.update(overall_task,advance=1)
                                     batchCounter+=1
+
+        shutil.rmtree(output_dir)
+        os.makedirs(output_dir)
 
     def run(self):
         start_time = time.time()  # Start time 
@@ -82,7 +88,7 @@ if __name__=="__main__":
 
     dataset_directory = 'original'  # Replace with your actual path
     output_directory = 'compressed'   # Replace with your desired output path
-    batchsize=2
+    batchsize=32
     main=AllInOne(dataset_directory,output_directory,batchsize)
     main.run()
 
