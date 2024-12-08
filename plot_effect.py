@@ -1,6 +1,7 @@
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+import title_renderer
 
 def load_and_prepare_data(csv_file):
     """
@@ -10,12 +11,14 @@ def load_and_prepare_data(csv_file):
     return df
 
 # Load the data
-df = load_and_prepare_data('combined_output_metric_ant_duck_referee_misato_2.csv')
-encoding_params = ('Bitrate',"B-Frames","Ref Number","QP Step")
+df = load_and_prepare_data('combined-05-12-2024.csv')
+encoding_params = ('Bitrate',"B-Frames","Ref Number","Quantizer","RC Lookahead")
 quality_metrics = ('PSNR(dB)', 'SSIM', 'Cbleed', 'Ringing', 'VIF','Compression Ratio (%)')
 marker_shapes = {
     "ant": "circle",
     "duck": "square",
+    "referee":"cross",
+    "misato":"x",
     # Add as many shapes as needed for each sequence
 }
 # Create initial scatter plot
@@ -27,7 +30,6 @@ def update_scatter_plot(param, metric):
     """
     fig.data = []  # Clear existing data
     for sequence in df['Sequence'].unique():
-        print(sequence)
         sequence_data = df[df['Sequence'] == sequence]
         fig.add_trace(go.Scatter(
             x=sequence_data[param],
@@ -39,15 +41,16 @@ def update_scatter_plot(param, metric):
             name=sequence.capitalize(),
             # Define hovertemplate to show all encoding parameter values
             hovertemplate=
-                'ID:%{customdata[3]}<br>'            
+                'ID:%{customdata[5]}<br>'            
                 'Metric:%{y}<br>'+
                 "Bitrate: %{customdata[0]}<br>" +               # Display x-axis (Bitrate)
                 "B-Frames: %{customdata[1]}<br>" + # Display Quantizer
                 "Ref: %{customdata[2]}<br>"+
-                "RC Lookahead: %{customdata[3]}<br>"           # Display Subme
+                "RC Lookahead: %{customdata[3]}<br>"+
+                "Quantizer: %{customdata[4]}<br>"
 
             ))
-        fig.data[-1].customdata = sequence_data[['Bitrate','B-Frames', 'QP Step','RC Lookahead']].values
+        fig.data[-1].customdata = sequence_data[['Bitrate','B-Frames', 'Ref Number','RC Lookahead','Quantizer','Video ID']].values
 
     fig.update_layout(
         title=f'{metric} vs {param}',
@@ -99,7 +102,20 @@ fig.update_layout(
             "pad": {"r": 10, "t": 10},
             "active": 0
         }
-    ]
+    ],
+    # sliders=[
+    #     {
+    #         "steps": [
+    #             {
+    #                 "method": "update",
+    #                 "label": f"{val}",
+    #                 "args": [{"visible": [seq == val for seq in df['Sequence'].unique()]}],
+    #             }
+    #             for val in df['Sequence'].unique()
+    #         ],
+    #         "active": 0,
+    #     }
+    # ]
 )
 
 # Create correlation heatmap
@@ -109,7 +125,7 @@ def create_correlation_heatmap(df):
     and quality metrics (at the bottom).
     """
     # Define the parameters and metrics
-    parameters = ['Bitrate', 'B-Frames', 'Ref Number', 'QP Step']
+    parameters = ['Bitrate',"B-Frames","Ref Number","Quantizer","RC Lookahead"]
     metrics = ['PSNR(dB)', 'SSIM', 'Cbleed', 'Ringing', 'VIF',"Compression Ratio (%)"]
     
     # Rearrange the correlation matrix to have parameters on rows and metrics on columns
@@ -126,12 +142,68 @@ def create_correlation_heatmap(df):
     )
     
     return heatmap_fig
+def create_pairwise_scatter_matrix(df):
+    """
+    Create a pairwise scatter plot matrix for encoding parameters and metrics.
+    """
+    parameters = ['Bitrate', "B-Frames", "Ref Number", "Quantizer", "RC Lookahead"]
+    metrics = ['PSNR(dB)', 'SSIM', 'Cbleed', 'Ringing', 'VIF', "Compression Ratio (%)"]
 
+    fig = px.scatter_matrix(
+        df,
+        dimensions=parameters + metrics,
+        color="Sequence",  # Color by sequence or another categorical feature
+        title="Pairwise Scatter Matrix: Encoding Parameters and Quality Metrics",
+        labels={col: col for col in parameters + metrics},
+    )
+    
+    fig.update_traces(diagonal_visible=False)  # Hide histograms on the diagonal
+    fig.update_layout(template="plotly_white")
+    return fig
+
+
+from sklearn.ensemble import RandomForestRegressor
+def calculate_feature_importance(df):
+    """
+    Calculate feature importance of encoding parameters on all quality metrics.
+    """
+    parameters = ['Bitrate', "B-Frames", "Ref Number", "Quantizer", "RC Lookahead"]
+    metrics = ['PSNR(dB)', 'SSIM', 'Cbleed', 'Ringing', 'VIF', "Compression Ratio (%)"]
+    importance_matrix = pd.DataFrame(index=parameters, columns=metrics)
+
+    for metric in metrics:
+        X = df[parameters]
+        y = df[metric]
+
+        # Handle missing or invalid values (if any)
+        X = X.fillna(0)
+        y = y.fillna(0)
+
+        model = RandomForestRegressor(n_estimators=100, random_state=42)
+        model.fit(X, y)
+
+        # Save feature importance
+        importance_matrix[metric] = model.feature_importances_
+
+    fig = px.imshow(
+    importance_matrix,
+    text_auto=".2f",
+    color_continuous_scale="Blues",
+    labels=dict(color="Importance"),
+    title="Feature Importance of Encoding Parameters on Quality Metrics"
+    )
+    fig.update_layout(template="plotly_white")
+    
+    return fig
 
 # Display the scatter plot and the heatmap
 scatter_fig = fig
 heatmap_fig = create_correlation_heatmap(df)
+scatter_matrix_fig = create_pairwise_scatter_matrix(df)
+importance_matrix = calculate_feature_importance(df)
 
 # Show both figures
-scatter_fig.show()
-heatmap_fig.show()
+scatter_fig.show(renderer="titleBrowser",browser_tab_title="Scatter Figure")
+scatter_matrix_fig.show(renderer="titleBrowser",browser_tab_title="Scatter Matrix Figure")
+importance_matrix.show(renderer="titleBrowser",browser_tab_title="Importance Matrix")
+heatmap_fig.show(renderer="titleBrowser",browser_tab_title="Correlation Matrix")
