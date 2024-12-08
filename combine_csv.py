@@ -10,7 +10,7 @@ def merge_csv_data(output_data,metrics_data):
     
     # Sort by Sequence and Video ID for better readability
     # merged_df = merged_df.sort_values(['Sequence', 'Video ID'])
-    merged_df.to_csv('combined_output_metric.csv', index=False)
+    merged_df.to_csv('combined_output_metric_ant_duck_referee_misato_2.csv', index=False)
 
     return merged_df
 

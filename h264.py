@@ -14,8 +14,10 @@ class H264:
                  ref=3,
                  subme=5,
                  rc_lookahead=40,
+                 csv_path='compressionData.csv'
                  ):
         #Default 30
+        self.csv_path=csv_path
         self.fps = 30
         
         
@@ -106,7 +108,7 @@ class H264:
                    "!" "queue" "!" "mp4mux" "!" "queue"]
         return pipeline
 
-    def save_to_csv(self, video_id,name,filepath='compressionData.csv'):
+    def save_to_csv(self, video_id,name):
         # Generate a random 8-character ID
         # Define the data row to save
         data = {
@@ -124,10 +126,10 @@ class H264:
         }
 
         # Check if file exists to write headers only once
-        file_exists = os.path.isfile(filepath)
+        file_exists = os.path.isfile(self.csv_path)
 
         # Write the data to a CSV file
-        with open(filepath, mode='a', newline='') as file:
+        with open(self.csv_path, mode='a', newline='') as file:
             writer = csv.DictWriter(file, fieldnames=data.keys())
             if not file_exists:
                 writer.writeheader()  # Write headers if file doesn't exist

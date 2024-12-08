@@ -10,9 +10,9 @@ def load_and_prepare_data(csv_file):
     return df
 
 # Load the data
-df = load_and_prepare_data('combined_output_metric.csv')
-encoding_params = ('Bitrate',"B-Frames","Ref Number","RC Lookahead")
-quality_metrics = ('PSNR(dB)', 'SSIM', 'Cbleed', 'Ringing', 'VIF')
+df = load_and_prepare_data('combined_output_metric_ant_duck_referee_misato_2.csv')
+encoding_params = ('Bitrate',"B-Frames","Ref Number","QP Step")
+quality_metrics = ('PSNR(dB)', 'SSIM', 'Cbleed', 'Ringing', 'VIF','Compression Ratio (%)')
 marker_shapes = {
     "ant": "circle",
     "duck": "square",
@@ -47,7 +47,7 @@ def update_scatter_plot(param, metric):
                 "RC Lookahead: %{customdata[3]}<br>"           # Display Subme
 
             ))
-        fig.data[-1].customdata = sequence_data[['Bitrate','B-Frames', 'Ref Number','RC Lookahead']].values
+        fig.data[-1].customdata = sequence_data[['Bitrate','B-Frames', 'QP Step','RC Lookahead']].values
 
     fig.update_layout(
         title=f'{metric} vs {param}',
@@ -109,8 +109,8 @@ def create_correlation_heatmap(df):
     and quality metrics (at the bottom).
     """
     # Define the parameters and metrics
-    parameters = ['Bitrate', 'B-Frames', 'Ref Number', 'RC Lookahead']
-    metrics = ['PSNR(dB)', 'SSIM', 'Cbleed', 'Ringing', 'VIF']
+    parameters = ['Bitrate', 'B-Frames', 'Ref Number', 'QP Step']
+    metrics = ['PSNR(dB)', 'SSIM', 'Cbleed', 'Ringing', 'VIF',"Compression Ratio (%)"]
     
     # Rearrange the correlation matrix to have parameters on rows and metrics on columns
     correlation_matrix = df[parameters + metrics].corr().loc[parameters, metrics]

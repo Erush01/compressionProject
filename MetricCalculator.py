@@ -92,6 +92,13 @@ def calculate_metrics(original, compressed):
 
         return ringing_score
 
+    def _Blurring(original, compressed):
+        """Detect blurring by analyzing the edge sharpness"""
+        original_edges = cv2.Laplacian(original, cv2.CV_64F)
+        compressed_edges = cv2.Laplacian(compressed, cv2.CV_64F)
+        blurring_score = np.mean(np.abs(original_edges - compressed_edges))
+        return blurring_score
+
     def _VIF(ref, dist):
         def compute_vif(ref_coeffs, dist_coeffs, sigma_nsq):
             num = 0.0
@@ -122,11 +129,13 @@ def calculate_metrics(original, compressed):
                   for ref_band, dist_band in zip(ref_coeffs, dist_coeffs))
         return vifp
 
+
     return {
         'psnr': _PSNR(original, compressed),
         'ssim': _SSIM(original, compressed),
         'cbleed': _ColorBleeding(original, compressed),
         'ringing': _Ringing(original, compressed),
+        'blurring': _Blurring(original, compressed),
         'vif': _VIF(original, compressed)
     }
 
@@ -156,8 +165,12 @@ class Metrics():
         # Get sorted lists of image paths
         original_images = sorted([os.path.join(self.original_path, sequence, x) 
                                 for x in os.listdir(os.path.join(self.original_path, sequence))])
+        #comp_images = sorted([os.path.join(self.compressed_path, sequence, video_id, x) 
+                            #for x in os.listdir(os.path.join(self.original_path, sequence))])
+        
+
         comp_images = sorted([os.path.join(self.compressed_path, sequence, video_id, x.replace(".bmp", ".png")) 
-                            for x in os.listdir(os.path.join(self.original_path, sequence))])
+                        for x in os.listdir(os.path.join(self.original_path, sequence))])
         
 
      
@@ -176,13 +189,14 @@ class Metrics():
             'ssim': sum(r['ssim'] for r in results) / seq_len,
             'cbleed': sum(r['cbleed'] for r in results) / seq_len,
             'ringing': sum(r['ringing'] for r in results) / seq_len,
+            'blurring': sum(r['blurring'] for r in results) / seq_len,
             'vif': sum(r['vif'] for r in results) / seq_len,
             'compression_ratio': compression_ratio
         }
         
         return sequence, video_id, avg_metrics
 
-    def saveCsv(self, name, video_id, psnr, ssim, cbleed, ringing, vif,compression_ratio, filepath='compressionMetrics.csv'):
+    def saveCsv(self, name, video_id, psnr, ssim, cbleed, ringing, vif,blurring,compression_ratio, filepath='compressionMetrics.csv'):
         data = {
             "Sequence": name,
             "Video ID": video_id,
@@ -190,6 +204,7 @@ class Metrics():
             "SSIM": ssim,
             "Cbleed": cbleed,
             "Ringing": ringing,
+            "Blurring":blurring,
             "VIF": vif,
             "Compression Ratio (%)": compression_ratio
         }
@@ -202,7 +217,7 @@ class Metrics():
                 writer.writeheader()
             writer.writerow(data)
 
-    def calculateMetrics(self,sequence):
+    def calculateMetrics(self,sequence,csv_path):
             # Process each sequence
 
         video_ids = [x for x in os.listdir(os.path.join(self.compressed_path, sequence)) 
@@ -222,8 +237,10 @@ class Metrics():
                 metrics['ssim'],
                 metrics['cbleed'],
                 metrics['ringing'],
+                metrics['blurring'],
                 metrics['vif'],
-                metrics['compression_ratio']
+                metrics['compression_ratio'],
+                filepath=csv_path
             )
 
 if __name__ == "__main__":
