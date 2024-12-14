@@ -100,42 +100,86 @@ def calculate_metrics(original, compressed):
         return blurring_score
 
     def _VIF(ref, dist):
-        def compute_vif(ref_coeffs, dist_coeffs, sigma_nsq):
-            num = 0.0
-            den = 0.0
-
-            for ref, dist in zip(ref_coeffs, dist_coeffs):
-                ref_var = np.var(ref)
-                dist_var = np.var(dist)
+        def compute_vif_channel(ref, dist, sigma_nsq=0.4):
+            """
+            Compute VIF for a single channel with multi-scale analysis.
+            
+            Parameters:
+            -----------
+            ref : ndarray
+                Reference image channel
+            dist : ndarray
+                Distorted image channel
+            sigma_nsq : float, optional
+                Noise variance (default: 0.4)
+            
+            Returns:
+            --------
+            float
+                VIF score for the channel
+            """
+            # Wavelet decomposition levels
+            levels = 4
+            
+            # Wavelet decomposition
+            ref_pyramid = pywt.wavedec2(ref, 'db5', level=levels)
+            dist_pyramid = pywt.wavedec2(dist, 'db5', level=levels)
+            
+            # Initialize VIF components
+            vif_total = 0.0
+            
+            # Process each scale
+            for scale in range(levels + 1):
+                if scale == 0:
+                    # Approximation coefficients at the lowest scale
+                    ref_scale = ref_pyramid[0]
+                    dist_scale = dist_pyramid[0]
+                else:
+                    # Detail coefficients at each scale
+                    ref_scale = ref_pyramid[scale][0]  # Horizontal details
+                    dist_scale = dist_pyramid[scale][0]
+                
+                # Local statistics
+                ref_mean = np.mean(ref_scale)
+                dist_mean = np.mean(dist_scale)
+                
+                ref_var = np.var(ref_scale)
+                dist_var = np.var(dist_scale)
+                
+                # Correlation
+                numerator = np.sum((ref_scale - ref_mean) * (dist_scale - dist_mean))
+                denominator = np.sqrt(np.sum((ref_scale - ref_mean)**2) * 
+                                    np.sum((dist_scale - dist_mean)**2))
+                
+                # Prevent division by zero
+                correlation = numerator / (denominator + 1e-10)
+                
+                # Information content calculation
                 g = ref_var / (dist_var + 1e-10)
+                
+                # Compute VIF components
+                num = np.log(1 + (g * correlation * ref_var / (sigma_nsq + 1e-10)))
+                den = np.log(1 + (ref_var / (sigma_nsq + 1e-10)))
+                
+                # Accumulate scale-dependent VIF
+                vif_total += num / (den + 1e-10)
+            
+            # Normalize VIF score
+            return vif_total / levels
 
-                num += np.log(1 + (g * ref_var / (sigma_nsq + 1e-10)))
-                den += np.log(1 + (ref_var / (sigma_nsq + 1e-10)))
-
-            vif_value = num / (den + 1e-10)
-            return vif_value
-
-        ref = cv2.cvtColor(ref, cv2.COLOR_BGR2GRAY) / 255.0
-        dist = cv2.cvtColor(dist, cv2.COLOR_BGR2GRAY) / 255.0
+    # Preprocess images
+        ref_gray = cv2.cvtColor(ref, cv2.COLOR_BGR2GRAY).astype(float) / 255.0
+        dist_gray = cv2.cvtColor(dist, cv2.COLOR_BGR2GRAY).astype(float) / 255.0
         
-        sigma_nsq = 0.4
-        ref_coeffs = pywt.wavedec2(ref, 'haar', level=4)
-        dist_coeffs = pywt.wavedec2(dist, 'haar', level=4)
+        # Compute VIF
+        vif_score = compute_vif_channel(ref_gray, dist_gray)
         
-        ref_coeffs = ref_coeffs[1:]
-        dist_coeffs = dist_coeffs[1:]
-        
-        vifp = sum(compute_vif(ref_band, dist_band, sigma_nsq) 
-                  for ref_band, dist_band in zip(ref_coeffs, dist_coeffs))
-        return vifp
+        return vif_score
 
 
     return {
         'psnr': _PSNR(original, compressed),
         'ssim': _SSIM(original, compressed),
-        'cbleed': _ColorBleeding(original, compressed),
-        'ringing': _Ringing(original, compressed),
-        'blurring': _Blurring(original, compressed),
         'vif': _VIF(original, compressed)
     }
 
@@ -187,9 +231,6 @@ class Metrics():
         avg_metrics = {
             'psnr': sum(r['psnr'] for r in results) / seq_len,
             'ssim': sum(r['ssim'] for r in results) / seq_len,
-            'cbleed': sum(r['cbleed'] for r in results) / seq_len,
-            'ringing': sum(r['ringing'] for r in results) / seq_len,
-            'blurring': sum(r['blurring'] for r in results) / seq_len,
             'vif': sum(r['vif'] for r in results) / seq_len,
             'compression_ratio': compression_ratio
         }
@@ -202,9 +243,6 @@ class Metrics():
             "Video ID": video_id,
             "PSNR(dB)": psnr,
             "SSIM": ssim,
-            "Cbleed": cbleed,
-            "Ringing": ringing,
-            "Blurring":blurring,
             "VIF": vif,
             "Compression Ratio (%)": compression_ratio
         }
@@ -235,9 +273,6 @@ class Metrics():
                 sequence, video_id,
                 metrics['psnr'],
                 metrics['ssim'],
-                metrics['cbleed'],
-                metrics['ringing'],
-                metrics['blurring'],
                 metrics['vif'],
                 metrics['compression_ratio'],
                 filepath=csv_path

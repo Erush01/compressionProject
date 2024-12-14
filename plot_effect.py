@@ -2,6 +2,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 import title_renderer
+from sklearn.ensemble import RandomForestRegressor
 
 def load_and_prepare_data(csv_file):
     """
@@ -18,9 +19,8 @@ marker_shapes = {
     "ant": "circle",
     "duck": "square",
     "referee":"cross",
-    "misato":"x",
-    # Add as many shapes as needed for each sequence
-}
+    "misato":"x"}
+
 # Create initial scatter plot
 fig = go.Figure()
 
@@ -37,7 +37,7 @@ def update_scatter_plot(param, metric):
             mode='markers',
             marker=dict(size=10,
                         symbol=marker_shapes.get(sequence, "circle"),
-                        opacity=0.7),  # Use "circle" as default shape),
+                        opacity=0.7),
             name=sequence.capitalize(),
             # Define hovertemplate to show all encoding parameter values
             hovertemplate=
@@ -103,26 +103,13 @@ fig.update_layout(
             "active": 0
         }
     ],
-    # sliders=[
-    #     {
-    #         "steps": [
-    #             {
-    #                 "method": "update",
-    #                 "label": f"{val}",
-    #                 "args": [{"visible": [seq == val for seq in df['Sequence'].unique()]}],
-    #             }
-    #             for val in df['Sequence'].unique()
-    #         ],
-    #         "active": 0,
-    #     }
-    # ]
 )
 
 # Create correlation heatmap
 def create_correlation_heatmap(df):
     """
-    Create a correlation heatmap between encoding parameters (on the left) 
-    and quality metrics (at the bottom).
+    Create a correlation heatmap between encoding parameters
+    and quality metrics
     """
     # Define the parameters and metrics
     parameters = ['Bitrate',"B-Frames","Ref Number","Quantizer","RC Lookahead"]
@@ -137,37 +124,18 @@ def create_correlation_heatmap(df):
         text_auto=".2f",
         zmin=-1,
         zmax=1,
-        color_continuous_scale='amp',
-        title="Correlation between Encoding Parameters (Left) and Quality Metrics (Bottom)"
+        color_continuous_scale='RdBu_r',
+        title="Correlation between Encoding Parameters  and Quality Metrics"
     )
     
     return heatmap_fig
-def create_pairwise_scatter_matrix(df):
-    """
-    Create a pairwise scatter plot matrix for encoding parameters and metrics.
-    """
-    parameters = ['Bitrate', "B-Frames", "Ref Number", "Quantizer", "RC Lookahead"]
-    metrics = ['PSNR(dB)', 'SSIM', 'Cbleed', 'Ringing', 'VIF', "Compression Ratio (%)"]
-
-    fig = px.scatter_matrix(
-        df,
-        dimensions=parameters + metrics,
-        color="Sequence",  # Color by sequence or another categorical feature
-        title="Pairwise Scatter Matrix: Encoding Parameters and Quality Metrics",
-        labels={col: col for col in parameters + metrics},
-    )
-    
-    fig.update_traces(diagonal_visible=False)  # Hide histograms on the diagonal
-    fig.update_layout(template="plotly_white")
-    return fig
 
 
-from sklearn.ensemble import RandomForestRegressor
 def calculate_feature_importance(df):
     """
     Calculate feature importance of encoding parameters on all quality metrics.
     """
-    parameters = ['Bitrate', "B-Frames", "Ref Number", "Quantizer", "RC Lookahead"]
+    parameters = ["B-Frames", "Ref Number", "Quantizer", "RC Lookahead"]
     metrics = ['PSNR(dB)', 'SSIM', 'Cbleed', 'Ringing', 'VIF', "Compression Ratio (%)"]
     importance_matrix = pd.DataFrame(index=parameters, columns=metrics)
 
@@ -181,7 +149,7 @@ def calculate_feature_importance(df):
 
         model = RandomForestRegressor(n_estimators=100, random_state=42)
         model.fit(X, y)
-
+        print(model.feature_importances_)
         # Save feature importance
         importance_matrix[metric] = model.feature_importances_
 
@@ -196,14 +164,14 @@ def calculate_feature_importance(df):
     
     return fig
 
+
 # Display the scatter plot and the heatmap
 scatter_fig = fig
 heatmap_fig = create_correlation_heatmap(df)
-scatter_matrix_fig = create_pairwise_scatter_matrix(df)
 importance_matrix = calculate_feature_importance(df)
 
+
 # Show both figures
-scatter_fig.show(renderer="titleBrowser",browser_tab_title="Scatter Figure")
-scatter_matrix_fig.show(renderer="titleBrowser",browser_tab_title="Scatter Matrix Figure")
+scatter_fig.show(renderer="titleBrowser",browser_tab_title="Encoding vs Metrics")
 importance_matrix.show(renderer="titleBrowser",browser_tab_title="Importance Matrix")
 heatmap_fig.show(renderer="titleBrowser",browser_tab_title="Correlation Matrix")
