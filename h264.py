@@ -14,6 +14,7 @@ class H264:
                  ref=3,
                  subme=5,
                  rc_lookahead=40,
+                 key_int_max=0,
                  csv_path='compressionData.csv'
                  ):
         #Default 30
@@ -59,7 +60,8 @@ class H264:
         #Number of frames for frametype lookahead , Default value : 40
         #[0,250]
         self.rc_lookahead = rc_lookahead
-        
+        self.key_int_max=key_int_max
+
         #self.bitrate_step=[576,1088,1536,2176,3072,4992,7552,20000]
         # Name              Res         Link    Bitrate Video   Audio
         #                               (Mbps)  (Mbps)  (Kbps)  (Kbps)
@@ -87,24 +89,25 @@ class H264:
                 f"pb-factor={self.pbfactor}\n"
                 f"ref={self.ref}\n"
                 f"subme={self.subme}\n"
-                f"rc-lookahead={self.rc_lookahead}\n")
+                f"rc-lookahead={self.rc_lookahead}\n"
+                f"key-int-max={self.key_int_max}\n")
 
     def create_line_bmp(self):
         ### Bad implementation
         pipeline= ["index=0",
                    "caps=\"image/bmp,framerate=30/1\"",
-                   "!" "avdec_bmp" ,
+                   "!","avdec_bmp" ,
                    "!","videoconvert","!" ,"queue",
                    "!" ,"x264enc" ,
                    f"bitrate={self.bitrate}" ,
                    f"quantizer={self.quantizer}",
-                   f"qp-step={self.qp_step}", 
+                   #f"qp-step={self.qp_step}", 
                    f"bframes={self.bframes}", 
-                   f"ip-factor={self.ipfactor}",
-                   f"pb-factor={self.pbfactor}",
-                   f"ref={self.ref}",
-                   f"subme={self.subme}",
-                   f"rc-lookahead={self.rc_lookahead}",
+                   #f"ip-factor={self.ipfactor}",
+                   #f"pb-factor={self.pbfactor}",
+                   #f"ref={self.ref}",
+                   #f"subme={self.subme}",
+                   #f"rc-lookahead={self.rc_lookahead}",
                    "!" "queue" "!" "mp4mux" "!" "queue"]
         return pipeline
 
@@ -123,6 +126,7 @@ class H264:
             "Ref Number": self.ref,
             "Subme": self.subme,
             "RC Lookahead":self.rc_lookahead,
+            "Key-int-max":self.key_int_max,
         }
 
         # Check if file exists to write headers only once

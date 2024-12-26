@@ -237,7 +237,7 @@ class Metrics():
         
         return sequence, video_id, avg_metrics
 
-    def saveCsv(self, name, video_id, psnr, ssim, cbleed, ringing, vif,blurring,compression_ratio, filepath='compressionMetrics.csv'):
+    def saveCsv(self, name, video_id, psnr, ssim, vif,compression_ratio, filepath='compressionMetrics.csv'):
         data = {
             "Sequence": name,
             "Video ID": video_id,

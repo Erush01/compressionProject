@@ -5,6 +5,31 @@ import plotly.express as px
 from sklearn.ensemble import RandomForestRegressor
 from typing import List, Dict, Any
 import title_renderer
+import os
+def select_csv_file():
+    """Lists all CSV files with 'combined' in their names in the current directory and allows the user to select one."""
+    # List all CSV files containing 'combined' in their names
+    csv_files = [file for file in os.listdir('csv_files/combined')]
+    
+    if not csv_files:
+        raise FileNotFoundError("No CSV files with 'combined' in their names found in the current directory.")
+    
+    # Display the list of CSV files
+    print("Available CSV files with 'combined' in the name:")
+    for idx, file in enumerate(csv_files, start=1):
+        print(f"{idx}. {file}")
+    
+    # Prompt the user to select a file
+    while True:
+        try:
+            choice = int(input("Enter the number of the CSV file you want to use: "))
+            if 1 <= choice <= len(csv_files):
+                return csv_files[choice - 1]
+            else:
+                print(f"Please select a number between 1 and {len(csv_files)}.")
+        except ValueError:
+            print("Invalid input. Please enter a number corresponding to the file.")
+
 
 class VideoMetricsAnalyzer:
     def __init__(self, csv_file: str):
@@ -16,7 +41,7 @@ class VideoMetricsAnalyzer:
             'Subme', 'RC Lookahead'
         ]
         
-        self.QUALITY_METRICS = ['PSNR(dB)', 'SSIM', 'Cbleed', 'Ringing', 'VIF', 'Compression Ratio (%)']
+        self.QUALITY_METRICS = ['PSNR(dB)', 'SSIM','VIF', 'Compression Ratio (%)']
         
         # Marker shapes for different sequences
         self.MARKER_SHAPES = {
@@ -25,13 +50,13 @@ class VideoMetricsAnalyzer:
             "referee": "cross",
             "misato": "x"
         }
-        
+        self.combined_path="csv_files/combined"
+
         # Load and prepare data
         self.df = self._load_and_prepare_data(csv_file)
         
         # Dynamically filter encoding parameters with variation
         self.ENCODING_PARAMS = self._get_params_with_variation()
-        
         # Initialize figures
         self.scatter_fig = None
         self.correlation_heatmap = None
@@ -44,6 +69,7 @@ class VideoMetricsAnalyzer:
         :param csv_file: Path to the CSV file
         :return: Prepared DataFrame
         """
+        csv_file=f"{self.combined_path}/{csv_file}"
         return pd.read_csv(csv_file)
 
     def _get_params_with_variation(self) -> List[str]:
@@ -102,12 +128,12 @@ class VideoMetricsAnalyzer:
                 name=sequence.capitalize(),
                 customdata=hover_data,
                 hovertemplate=(
-                    'ID:%{customdata[-1]}<br>'
-                    'Metric:%{y}<br>' +
-                    ''.join(f"{p}: %{{customdata[{i}]}}<br>" for i, p in enumerate(self.ENCODING_PARAMS))
+                    ''.join(f"{p}: %{{customdata[{i}]}}<br>" for i, p in enumerate(self.ENCODING_PARAMS)),
+                    'Metric:%{y}<br>'
+
                 )
             ))
-
+        
         # Update layout
         fig.update_layout(
             title=f'{metric} vs {param}',
@@ -244,7 +270,8 @@ class VideoMetricsAnalyzer:
 def main():
 
     # File path
-    csv_file = 'combined-05-12-2024.csv'
+    csv_file = select_csv_file()
+    print(f"You selected: {csv_file}")
     
     # Create analyzer
     analyzer = VideoMetricsAnalyzer(csv_file)

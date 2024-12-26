@@ -13,6 +13,7 @@ import os
 from multiprocessing import Pool, cpu_count
 import itertools
 from datetime import datetime
+
 def clearFolder(folder):
     shutil.rmtree(folder)
     os.makedirs(folder)
@@ -43,15 +44,15 @@ class AllInOne:
 
             # Get all parameter combinations dynamically
             parameter_keys = list(parameters.keys())
-            compression_csv_path=f"Compression {'-'.join(parameter_keys)}_{self.current_date}.csv"
-            metrics_csv_path=f"Metrics {'-'.join(parameter_keys)}_{self.current_date}.csv"
+            compression_csv_path=f"csv_files/compression/Compression {'-'.join(parameter_keys)}_{self.current_date}.csv"
+            metrics_csv_path=f"csv_files/metrics/Metrics {'-'.join(parameter_keys)}_{self.current_date}.csv"
             parameter_values = list(parameters.values())
             parameter_combinations = list(itertools.product(*parameter_values))  # All combinations
             num_combinations = len(parameter_combinations)
 
-            # Batch calculation
+            self.batchSize=min(num_combinations,self.batchSize)
             batchNumber = num_combinations // self.batchSize
-            batchCounter = 0
+            batchCounter = 1
             totalBatchCounter = 1
             with rich.live.Live(self.sequenceProgress, console=self.console, refresh_per_second=10):
                 self.console.log(f'Processing sequence: {name}')
