@@ -128,9 +128,8 @@ class VideoMetricsAnalyzer:
                 name=sequence.capitalize(),
                 customdata=hover_data,
                 hovertemplate=(
-                    ''.join(f"{p}: %{{customdata[{i}]}}<br>" for i, p in enumerate(self.ENCODING_PARAMS)),
-                    'Metric:%{y}<br>'
-
+                    ''.join(f"{p}: %{{customdata[{i}]}}<br>" for i, p in enumerate(self.ENCODING_PARAMS))
+                    + 'Metric: %{y}<br>'
                 )
             ))
         
