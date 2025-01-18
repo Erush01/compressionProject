@@ -30,7 +30,7 @@ class VideoCreator:
             "!", "filesink", f"location={output_video}/{video_id}.mp4"
         ]
         gst_command = gst_source_command + codec.create_line_bmp() + gst_sink_command
-
+        print(gst_command)
         try:
             subprocess.run(gst_command, check=True)
             codec.save_to_csv(video_id,sequence_name)

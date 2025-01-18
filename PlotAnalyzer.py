@@ -123,7 +123,10 @@ class VideoMetricsAnalyzer:
                 marker=dict(
                     size=10,
                     symbol=self.MARKER_SHAPES.get(sequence, "circle"),
-                    opacity=0.7
+                    opacity=1.0,
+                    line=dict(width=2,
+                            color='DarkSlateGrey')
+                    
                 ),
                 name=sequence.capitalize(),
                 customdata=hover_data,
@@ -263,8 +266,8 @@ class VideoMetricsAnalyzer:
 
         # Display the figures
         self.scatter_fig.show(renderer="titleBrowser", browser_tab_title="Encoding vs Metrics")
-        self.correlation_heatmap.show(renderer="titleBrowser", browser_tab_title="Correlation Matrix")
-        self.importance_matrix.show(renderer="titleBrowser", browser_tab_title="Importance Matrix")
+        #self.correlation_heatmap.show(renderer="titleBrowser", browser_tab_title="Correlation Matrix")
+        #self.importance_matrix.show(renderer="titleBrowser", browser_tab_title="Importance Matrix")
 
 def main():
 

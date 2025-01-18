@@ -61,7 +61,7 @@ class H264:
         #[0,250]
         self.rc_lookahead = rc_lookahead
         self.key_int_max=key_int_max
-
+        self.pass_val="quant"
         #self.bitrate_step=[576,1088,1536,2176,3072,4992,7552,20000]
         # Name              Res         Link    Bitrate Video   Audio
         #                               (Mbps)  (Mbps)  (Kbps)  (Kbps)
@@ -102,7 +102,6 @@ class H264:
                    f"bitrate={self.bitrate}" ,
                    f"quantizer={self.quantizer}",
                    #f"qp-step={self.qp_step}", 
-                   f"bframes={self.bframes}", 
                    #f"ip-factor={self.ipfactor}",
                    #f"pb-factor={self.pbfactor}",
                    #f"ref={self.ref}",

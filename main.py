@@ -26,7 +26,7 @@ class AllInOne:
         self.compressor=VideoCreator(input_directory,output_directory)
         self.extractor=FrameExtractor(output_directory,16)
         self.metrics=Metrics(input_directory,output_directory)
-        self.json_path='h264_parameters_small.json'
+        self.json_path='h264_parameters_small_old.json'
         self.sequenceProgress = Progress(TextColumn("[progress.description]{task.description}"),
                                     BarColumn(),
                                     TaskProgressColumn(),
@@ -44,8 +44,8 @@ class AllInOne:
 
             # Get all parameter combinations dynamically
             parameter_keys = list(parameters.keys())
-            compression_csv_path=f"csv_files/compression/Compression {'-'.join(parameter_keys)}_{self.current_date}.csv"
-            metrics_csv_path=f"csv_files/metrics/Metrics {'-'.join(parameter_keys)}_{self.current_date}.csv"
+            compression_csv_path=f"csv_files/compression/Compression  {'-'.join(parameter_keys)}_{self.current_date}.csv"
+            metrics_csv_path=f"csv_files/metrics/Metrics  {'-'.join(parameter_keys)}_{self.current_date}.csv"
             parameter_values = list(parameters.values())
             parameter_combinations = list(itertools.product(*parameter_values))  # All combinations
             num_combinations = len(parameter_combinations)
